@@ -2,18 +2,14 @@ FROM nvidia/cuda:9.0-cudnn7-devel-ubuntu16.04
 
 MAINTAINER @mynameismaxz (github.com/mynameismaxz)
 
+ENV PYENV_ROOT="/data/.pyenv" \
+    PATH="/data/.pyenv/bin:/data/.pyenv/shims:$PATH"
+
 # install all-of-package
-RUN apt-get update && apt-get install -y software-properties-common && \
+RUN apt-get update && apt-get install -y software-properties-common python-software-properties && \
     add-apt-repository ppa:jonathonf/ffmpeg-4 -y && \
     apt-get update && \
     apt-get install -y build-essential \
-    python-pip \
-    python-dev \
-    python-numpy \
-    python3-dev \
-    python3-setuptools \
-    python3-numpy \
-    python3-pip \
     make \
     cmake \
     libavcodec-dev \
@@ -60,21 +56,42 @@ RUN apt-get update && apt-get install -y software-properties-common && \
 	libeigen3-dev \
 	libtbb-dev \
 	libgtk2.0-dev \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /data
 
 WORKDIR /data
 
-# unlink old-python (python2) & make new symbolic-link for python3
-RUN unlink /usr/bin/python \
-    && unlink /usr/bin/pip \
-    && ln -s /usr/bin/python3 /usr/bin/python \
-    && ln -s /usr/bin/pip3 /usr/bin/pip \
-    && pip install --upgrade pip
+RUN curl -L https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-installer | bash
+
+RUN pyenv update \
+    && pyenv install 3.6.8 \
+    && pyenv virtualenv 3.6.8 general \
+    && pyenv global general
+
+# && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.5 1 \
+#     && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.6 2 \
+#     && apt-get install -y \
+#     python-pip \
+#     python-dev \
+#     python-numpy \
+#     python3-dev \
+#     python3-setuptools \
+#     python3-numpy \
+#     python3-pip \
+
+# # unlink old-python (python2) & make new symbolic-link for python3
+# RUN unlink /usr/bin/python \
+#     && unlink /usr/bin/pip \
+#     && ln -s /usr/bin/python3 /usr/bin/python \
+#     && ln -s /usr/bin/pip3 /usr/bin/pip \
+#     && pip install --upgrade pip
+
 
 # install essential python package
-RUN pip install torchvision==0.4.0 \
+RUN pip install --upgrade pip \
+    && pip install torchvision==0.4.0 \
     cython==0.29.11 \
     numpy==1.16.4 \
     scipy \
@@ -93,7 +110,7 @@ RUN wget -O OpenCV-4.1.0.zip https://github.com/opencv/opencv/archive/4.1.0.zip 
     && mkdir build \
     && cd build \
     ### using cmake refer from INSTALLATION.md default file ###
-    && cmake \ 
+    && cmake \
         -DCMAKE_BUILD_TYPE=Release \
         -DWITH_CUDA=ON \
         -DOPENCV_EXTRA_MODULES_PATH=../../opencv_contrib-4.1.0/modules/ \
@@ -118,13 +135,13 @@ RUN wget --no-check-certificate https://cmake.org/files/v3.9/cmake-3.9.0.tar.gz 
     && make -j && make install
 
 # install decord
-RUN cd mmaction/third_party/decord \
-    && mkdir -p build \
-    && cd build \
-    && cmake .. -DUSE_CUDA=0 \
-    && make -j \
-    && cd ../python \
-    && python3 setup.py install --user
+# RUN cd mmaction/third_party/decord \
+#     && mkdir -p build \
+#     && cd build \
+#     && cmake .. -DUSE_CUDA=0 \
+#     && make -j \
+#     && cd ../python \
+#     && python3 setup.py install --user
 
 # install dense flow
 RUN cd mmaction/third_party/dense_flow \
@@ -139,7 +156,7 @@ RUN git clone --recursive https://github.com/open-mmlab/mmcv.git \
     && pip install -e .
 
 # setup mmaction
-RUN cd mmaction \ 
+RUN cd mmaction \
     && chmod 777 compile.sh \
     && ./compile.sh \
     && python3 setup.py develop
