@@ -26,8 +26,8 @@ def dump_frames(vid_item):
     #         print('[Warning] length inconsistent!'
     #               'Early stop with {} out of {} frames'.format(i + 1, len(vr)))
     #         break
-    print('{} done with {} frames'.format(vid_name, len(vr)))
-    sys.stdout.flush()
+    # print('{} done with {} frames'.format(vid_name, len(vr)))
+    # sys.stdout.flush()
     return vr.fps, vr.frame_cnt
 
 
@@ -129,8 +129,6 @@ if __name__ == '__main__':
         fps, num_frames = dump_frames((fullpath_list[i], vid_item, i))
         video_id = Path(vid_item).stem
         metadata.append([video_id, fps, num_frames])
-        if i == 5:
-            break
 
     print(metadata_file)
     with open(metadata_file, 'w') as fid:
