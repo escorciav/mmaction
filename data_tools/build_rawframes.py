@@ -99,7 +99,9 @@ def parse_args():
     parser.add_argument("--out_format", type=str, default='dir',
                         choices=['dir', 'zip'], help='output format')
     parser.add_argument("--ext", type=str, default='avi',
-                        choices=['avi', 'mp4'], help='video file extensions')
+                        choices=['avi', 'mp4', 'all'], help='video file extensions')
+    parser.add_argument("--ignore_level_out", action='store_true', default=False,
+                        help='Force use of single level in out_dir')
     parser.add_argument("--new_width", type=int, default=0,
                         help='resize image width')
     parser.add_argument("--new_height", type=int,
@@ -119,7 +121,7 @@ if __name__ == '__main__':
     if not osp.isdir(args.out_dir):
         print('Creating folder: {}'.format(args.out_dir))
         os.makedirs(args.out_dir)
-    if args.level == 2:
+    if args.level == 2 and not args.ignore_level_out:
         classes = os.listdir(args.src_dir)
         for classname in classes:
             new_dir = osp.join(args.out_dir, classname)
@@ -129,24 +131,37 @@ if __name__ == '__main__':
 
     print('Reading videos from folder: ', args.src_dir)
     print('Extension of videos: ', args.ext)
-    if args.level == 2:
-        fullpath_list = glob.glob(args.src_dir + '/*/*.' + args.ext)
-        done_fullpath_list = glob.glob(args.out_dir + '/*/*')
-    elif args.level == 1:
-        fullpath_list = glob.glob(args.src_dir + '/*.' + args.ext)
-        done_fullpath_list = glob.glob(args.out_dir + '/*')
+    if args.ext == 'all':
+        src_pattern = done_pattern = '*'
+        if args.level == 2:
+            src_pattern = done_pattern = '**/*'
+    else:
+        if args.level == 2:
+            src_pattern = '/*/*.' + args.ext
+            done_pattern = '/*/*'
+        elif args.level == 1:
+            src_pattern = '/*.' + args.ext
+            done_pattern = '/*'
+    fullpath_list = glob.glob(args.src_dir + src_pattern)
+    done_fullpath_list = glob.glob(args.out_dir + done_pattern)
     print('Total number of videos found: ', len(fullpath_list))
     if args.resume:
         fullpath_list = set(fullpath_list).difference(set(done_fullpath_list))
         fullpath_list = list(fullpath_list)
         print('Resuming. number of videos to be done: ', len(fullpath_list))
 
-    if args.level == 2:
+    out_two_levels = True if args.level == 2 else False
+    if args.level == 2 and args.ignore_level_out:
+        out_two_levels = False
+    if out_two_levels:
         vid_list = list(map(lambda p: osp.join(
             '/'.join(p.split('/')[-2:])), fullpath_list))
-    elif args.level == 1:
+    else:
         vid_list = list(map(lambda p: p.split('/')[-1], fullpath_list))
 
+    from datetime import datetime
+    start_time = datetime.now()
+    print('Start time: {}'.format(start_time.isoformat()))
     pool = Pool(args.num_worker)
     if args.flow_type == 'tvl1':
         pool.map(run_optical_flow, zip(
@@ -157,3 +172,6 @@ if __name__ == '__main__':
     else:
         pool.map(dump_frames, zip(
             fullpath_list, vid_list, range(len(vid_list))))
+    end_time = datetime.now()
+    print('Finished time: {}'.format(end_time.isoformat()))
+    print('Elapsed time: {}'.format(end_time - start_time))
