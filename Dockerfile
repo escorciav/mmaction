@@ -1,4 +1,7 @@
 FROM nvidia/cuda:9.0-cudnn7-devel-ubuntu16.04
+# Added as recent update in mmaction broke the previous frame&flow extraction tool
+ARG MMACTION_REPO=https://github.com/escorciav/mmaction.git
+ARG MMACTION_HASH=7f3490d3db6a67fe7b87bfef238b757403b670e3
 
 MAINTAINER @mynameismaxz (github.com/mynameismaxz)
 
@@ -93,7 +96,7 @@ RUN wget -O OpenCV-4.1.0.zip https://github.com/opencv/opencv/archive/4.1.0.zip 
     && mkdir build \
     && cd build \
     ### using cmake refer from INSTALLATION.md default file ###
-    && cmake \ 
+    && cmake \
         -DCMAKE_BUILD_TYPE=Release \
         -DWITH_CUDA=ON \
         -DOPENCV_EXTRA_MODULES_PATH=../../opencv_contrib-4.1.0/modules/ \
@@ -107,7 +110,9 @@ RUN wget -O OpenCV-4.1.0.zip https://github.com/opencv/opencv/archive/4.1.0.zip 
     && make -j
 
 # clone repository (mmaction)
-RUN git clone --recursive https://github.com/open-mmlab/mmaction.git
+RUN git clone --recursive ${MMACTION_REPO} \
+    && cd mmaction \
+    && git checkout ${MMACTION_HASH}
 
 # install cmake first
 RUN wget --no-check-certificate https://cmake.org/files/v3.9/cmake-3.9.0.tar.gz \
@@ -137,7 +142,7 @@ RUN cd mmaction/third_party/dense_flow \
 RUN pip install mmcv==0.2.16
 
 # setup mmaction
-RUN cd mmaction \ 
+RUN cd mmaction \
     && chmod 777 compile.sh \
     && ./compile.sh \
     && python3 setup.py develop
